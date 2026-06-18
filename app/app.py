@@ -6,6 +6,8 @@ described in Chapter 3 §3.5 and Chapter 2 §2.6 of the LeafNet thesis.
 """
 
 import os
+import base64
+import io
 from flask import Flask, request, render_template
 from PIL import Image
 import numpy as np
@@ -62,11 +64,24 @@ def preprocess_image(image_file):
     model.predict().
     """
     img = Image.open(image_file)
-    img = img.convert("RGB")          # handles PNG alpha channel, grayscale, etc.
+    img = img.convert("RGB")
     img = img.resize(IMG_SIZE)
     img_array = np.array(img, dtype=np.float32) / 255.0
     img_array = np.expand_dims(img_array, axis=0)
     return img_array
+
+
+def image_to_base64(image_file):
+    image_file.seek(0)
+    data = image_file.read()
+    encoded = base64.b64encode(data).decode("utf-8")
+    mime = "image/jpeg"
+    name = getattr(image_file, "filename", "")
+    if name.lower().endswith(".png"):
+        mime = "image/png"
+    elif name.lower().endswith(".webp"):
+        mime = "image/webp"
+    return f"data:{mime};base64,{encoded}"
 
 
 @app.route("/", methods=["GET"])
@@ -82,6 +97,7 @@ def predict():
     file = request.files["leaf_image"]
 
     try:
+        img_b64 = image_to_base64(file)
         img_array = preprocess_image(file)
     except Exception:
         return render_template("index.html", result=None,
@@ -94,10 +110,19 @@ def predict():
 
     info = DISPLAY_INFO[predicted_class]
 
+    all_probs = [
+        {"class_key": CLASS_NAMES[i], "label": DISPLAY_INFO[CLASS_NAMES[i]]["label"],
+         "pct": round(float(predictions[i]) * 100, 1)}
+        for i in range(len(CLASS_NAMES))
+    ]
+
     result = {
+        "class_key": predicted_class,
         "label": info["label"],
-        "confidence": f"{confidence:.1f}%",
+        "confidence": f"{confidence:.1f}",
         "action": info["action"],
+        "all_probs": all_probs,
+        "image_b64": img_b64,
     }
 
     return render_template("index.html", result=result, error=None)
