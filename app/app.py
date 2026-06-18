@@ -6,6 +6,10 @@ described in Chapter 3 §3.5 and Chapter 2 §2.6 of the LeafNet thesis.
 """
 
 import os
+# Suppress TensorFlow GPU warnings on CPU-only deployment environments
+# Set CUDA_VISIBLE_DEVICES=-1 to explicitly disable GPU even if CUDA is present
+# Remove or comment this line if deploying to a GPU-enabled server in future
+os.environ.setdefault("CUDA_VISIBLE_DEVICES", "-1")
 import base64
 import io
 from flask import Flask, request, render_template
@@ -14,6 +18,8 @@ import numpy as np
 import tensorflow as tf
 
 app = Flask(__name__)
+app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key-change-in-production")
+app.config["MAX_CONTENT_LENGTH"] = int(os.environ.get("MAX_CONTENT_LENGTH", 10 * 1024 * 1024))
 
 # ── Load the trained model once at startup, not per-request ──
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "model", "MobileNetV2_final.h5")
@@ -129,5 +135,6 @@ def predict():
 
 
 if __name__ == "__main__":
-    # debug=False for anything resembling a deployment; True only for local dev
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    debug = os.environ.get("FLASK_DEBUG", "0") == "1"
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=debug)
