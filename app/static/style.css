@@ -18,7 +18,6 @@
   --text-muted:   #64748b;
   --radius:       14px;
   --shadow:       0 4px 24px rgba(0,0,0,.08);
-  --shadow-lg:    0 8px 40px rgba(0,0,0,.12);
   --transition:   .2s ease;
 }
 
@@ -76,8 +75,8 @@ body {
   padding: 2rem;
   border: 1px solid var(--border);
 }
-.card-title { font-size: 1.3rem; font-weight: 700; margin-bottom: .35rem; color: var(--text); }
-.card-subtitle { color: var(--text-muted); font-size: .92rem; margin-bottom: 1.5rem; }
+.card-title { font-size: 1.3rem; font-weight: 700; margin-bottom: .35rem; }
+.card-subtitle { color: var(--text-muted); font-size: .92rem; margin-bottom: 1.25rem; }
 
 /* ── Alert ── */
 .alert {
@@ -90,6 +89,79 @@ body {
   margin-bottom: 1.25rem;
 }
 .alert-error { background: var(--red-light); color: var(--red); border: 1px solid var(--red-mid); }
+
+/* ── Desktop camera notice ── */
+.desktop-cam-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  background: #f0fdf4;
+  border: 1.5px solid var(--green-mid);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+.dcn-body {
+  display: flex;
+  align-items: flex-start;
+  gap: .75rem;
+  flex: 1;
+  min-width: 200px;
+}
+.dcn-icon { font-size: 2rem; flex-shrink: 0; line-height: 1; }
+.dcn-text strong { display: block; font-size: .95rem; color: var(--green); margin-bottom: .2rem; }
+.dcn-text p { font-size: .83rem; color: var(--text-muted); line-height: 1.5; }
+.dcn-qr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .4rem;
+  flex-shrink: 0;
+}
+.dcn-qr img {
+  width: 100px;
+  height: 100px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+.dcn-url {
+  font-size: .7rem;
+  color: var(--green);
+  text-decoration: underline;
+  word-break: break-all;
+  max-width: 110px;
+  text-align: center;
+}
+
+/* ── Mode tabs ── */
+.mode-tabs {
+  display: flex;
+  gap: .5rem;
+  margin-bottom: 1.25rem;
+  background: var(--surface-2);
+  padding: .3rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+.mode-tab {
+  flex: 1;
+  padding: .6rem 1rem;
+  border: none;
+  background: transparent;
+  border-radius: 7px;
+  font-size: .9rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+}
+.mode-tab.active {
+  background: var(--surface);
+  color: var(--green);
+  box-shadow: 0 1px 4px rgba(0,0,0,.08);
+}
 
 /* ── Drop zone ── */
 .drop-zone {
@@ -109,13 +181,11 @@ body {
 .drop-zone:focus { border-color: var(--green); background: #f0fdf4; outline: none; }
 .drop-zone.drag-over { border-color: var(--green); background: #dcfce7; }
 .drop-zone.has-preview { border-style: solid; border-color: var(--green); }
-
 .drop-zone-inner { text-align: center; padding: 2rem 1rem; pointer-events: none; }
 .drop-icon { font-size: 2.5rem; margin-bottom: .75rem; }
 .drop-primary { font-weight: 600; color: var(--text); margin-bottom: .25rem; }
 .drop-secondary { color: var(--text-muted); font-size: .9rem; }
 .drop-hint { font-size: .8rem; color: var(--text-muted); margin-top: .5rem; }
-
 .file-input {
   position: absolute;
   inset: 0;
@@ -124,9 +194,8 @@ body {
   width: 100%;
   height: 100%;
   z-index: 1;
-  pointer-events: none; /* clicks forwarded by JS */
+  pointer-events: none;
 }
-
 .preview-img {
   width: 100%;
   height: 100%;
@@ -168,6 +237,125 @@ body {
 }
 .file-clear-btn:hover { opacity: 1; }
 
+/* ── Camera viewfinder ── */
+.cam-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4/3;
+  background: #000;
+  border-radius: 14px;
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+.cam-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Corner guide brackets */
+.cam-guide {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cam-corner {
+  position: absolute;
+  width: 36px;
+  height: 36px;
+  border-color: rgba(255,255,255,.85);
+  border-style: solid;
+}
+.cam-corner--tl { top: 16px;    left: 16px;    border-width: 3px 0 0 3px; border-radius: 4px 0 0 0; }
+.cam-corner--tr { top: 16px;    right: 16px;   border-width: 3px 3px 0 0; border-radius: 0 4px 0 0; }
+.cam-corner--bl { bottom: 56px; left: 16px;    border-width: 0 0 3px 3px; border-radius: 0 0 0 4px; }
+.cam-corner--br { bottom: 56px; right: 16px;   border-width: 0 3px 3px 0; border-radius: 0 0 4px 0; }
+.cam-guide-label {
+  position: absolute;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: .72rem;
+  color: rgba(255,255,255,.7);
+  background: rgba(0,0,0,.35);
+  padding: .2rem .6rem;
+  border-radius: 99px;
+  white-space: nowrap;
+  letter-spacing: .02em;
+}
+
+/* Camera controls bar */
+.cam-controls {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: .75rem 1.5rem 1rem;
+  background: linear-gradient(to top, rgba(0,0,0,.55), transparent);
+}
+.cam-action-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,.15);
+  backdrop-filter: blur(4px);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition), transform var(--transition);
+}
+.cam-action-btn:hover { background: rgba(255,255,255,.28); transform: scale(1.08); }
+.cam-action-btn svg { width: 20px; height: 20px; }
+.cam-action-spacer { width: 44px; }
+
+/* Capture button */
+.cam-capture-btn {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  border: 3px solid rgba(255,255,255,.9);
+  background: rgba(255,255,255,.2);
+  backdrop-filter: blur(4px);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform var(--transition), background var(--transition);
+  position: relative;
+}
+.cam-capture-btn:active { transform: scale(.92); }
+.cam-capture-ring {
+  display: block;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform var(--transition);
+}
+.cam-capture-btn:active .cam-capture-ring { transform: scale(.88); }
+
+/* Camera error state */
+.cam-error {
+  text-align: center;
+  padding: 2rem 1rem;
+  background: var(--red-light);
+  border: 1px solid var(--red-mid);
+  border-radius: 12px;
+  margin-bottom: 1rem;
+}
+.cam-error-icon { font-size: 2rem; margin-bottom: .5rem; }
+.cam-error-msg { font-size: .9rem; color: var(--red); margin-bottom: 1rem; line-height: 1.5; }
+
 /* ── Buttons ── */
 .btn {
   display: inline-flex;
@@ -183,22 +371,12 @@ body {
   text-decoration: none;
   border: 2px solid transparent;
 }
-.btn-primary {
-  background: var(--green);
-  color: #fff;
-  width: 100%;
-  border-color: var(--green);
-}
+.btn-primary { background: var(--green); color: #fff; width: 100%; border-color: var(--green); }
 .btn-primary:hover:not(:disabled) { background: #15803d; transform: translateY(-1px); }
 .btn-primary:disabled { opacity: .45; cursor: not-allowed; transform: none; }
-.btn-outline {
-  background: transparent;
-  color: var(--green);
-  border-color: var(--green);
-}
+.btn-outline { background: transparent; color: var(--green); border-color: var(--green); }
 .btn-outline:hover { background: var(--green-light); }
 
-/* Spinner */
 .btn-spinner {
   width: 18px;
   height: 18px;
@@ -221,7 +399,6 @@ body {
   align-items: start;
   margin-bottom: 1.5rem;
 }
-
 .result-image-wrap {
   border-radius: 10px;
   overflow: hidden;
@@ -232,11 +409,7 @@ body {
 .result-image { width: 100%; height: 100%; object-fit: cover; display: block; }
 
 /* Verdict */
-.verdict {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
+.verdict { display: flex; flex-direction: column; gap: 1rem; }
 .verdict-badge {
   display: flex;
   align-items: center;
@@ -246,16 +419,16 @@ body {
   font-weight: 700;
   font-size: 1.1rem;
 }
-.verdict--healthy       .verdict-badge { background: var(--green-light); color: var(--green); }
-.verdict--early-blight  .verdict-badge { background: var(--orange-light); color: var(--orange); }
-.verdict--late-blight   .verdict-badge { background: var(--red-light);    color: var(--red); }
+.verdict--healthy      .verdict-badge { background: var(--green-light);  color: var(--green); }
+.verdict--early-blight .verdict-badge { background: var(--orange-light); color: var(--orange); }
+.verdict--late-blight  .verdict-badge { background: var(--red-light);    color: var(--red); }
 .verdict-icon { font-size: 1.3rem; }
 
 .confidence-wrap { display: flex; align-items: baseline; gap: .4rem; }
 .confidence-value { font-size: 2.4rem; font-weight: 800; line-height: 1; }
-.verdict--healthy       .confidence-value { color: var(--green); }
-.verdict--early-blight  .confidence-value { color: var(--orange); }
-.verdict--late-blight   .confidence-value { color: var(--red); }
+.verdict--healthy      .confidence-value { color: var(--green); }
+.verdict--early-blight .confidence-value { color: var(--orange); }
+.verdict--late-blight  .confidence-value { color: var(--red); }
 .confidence-text { color: var(--text-muted); font-size: .9rem; }
 
 /* Probability bars */
@@ -263,11 +436,7 @@ body {
 .prob-row { display: grid; grid-template-columns: 100px 1fr 45px; align-items: center; gap: .5rem; }
 .prob-label { font-size: .8rem; color: var(--text-muted); white-space: nowrap; }
 .prob-track { height: 8px; background: var(--border); border-radius: 99px; overflow: hidden; }
-.prob-fill {
-  height: 100%;
-  border-radius: 99px;
-  transition: width .8s cubic-bezier(.4,0,.2,1);
-}
+.prob-fill { height: 100%; border-radius: 99px; transition: width .8s cubic-bezier(.4,0,.2,1); }
 .prob-fill--healthy      { background: var(--green); }
 .prob-fill--early-blight { background: var(--orange); }
 .prob-fill--late-blight  { background: var(--red); }
@@ -288,24 +457,18 @@ body {
 .recommendation--early-blight .recommendation-title { color: var(--orange); }
 .recommendation--late-blight  .recommendation-title { color: var(--red); }
 .recommendation-body { font-size: .9rem; color: var(--text); line-height: 1.65; }
-
 .result-footer { text-align: center; }
 
 /* ── Info section ── */
 .section-title {
-  font-size: 1.15rem;
+  font-size: .8rem;
   font-weight: 700;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: .06em;
-  font-size: .8rem;
   margin-bottom: 1rem;
 }
-.info-cards {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
-}
+.info-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
 .info-card {
   background: var(--surface);
   border-radius: var(--radius);
@@ -343,4 +506,10 @@ body {
   .result-image-wrap { aspect-ratio: 4/3; max-height: 240px; }
   .info-cards { grid-template-columns: 1fr; }
   .confidence-value { font-size: 1.9rem; }
+  .desktop-cam-notice { flex-direction: column; }
+  .dcn-qr { flex-direction: row; align-items: center; gap: .75rem; }
+  .dcn-url { max-width: none; text-align: left; }
+  /* Larger capture button on small screens */
+  .cam-capture-btn { width: 76px; height: 76px; }
+  .cam-capture-ring { width: 58px; height: 58px; }
 }
