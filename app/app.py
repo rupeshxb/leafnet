@@ -10,12 +10,20 @@ import os
 # Set CUDA_VISIBLE_DEVICES=-1 to explicitly disable GPU even if CUDA is present
 # Remove or comment this line if deploying to a GPU-enabled server in future
 os.environ.setdefault("CUDA_VISIBLE_DEVICES", "-1")
+# Limit TF to 1 thread — free-tier hosts are single-core; more threads fight each other
+os.environ.setdefault("TF_NUM_INTRAOP_THREADS", "1")
+os.environ.setdefault("TF_NUM_INTEROP_THREADS", "1")
+
 import base64
 import io
 from flask import Flask, request, render_template
 from PIL import Image
 import numpy as np
 import tensorflow as tf
+
+# Single-core thread config must be set before any TF ops
+tf.config.threading.set_intra_op_parallelism_threads(1)
+tf.config.threading.set_inter_op_parallelism_threads(1)
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key-change-in-production")
@@ -24,6 +32,11 @@ app.config["MAX_CONTENT_LENGTH"] = int(os.environ.get("MAX_CONTENT_LENGTH", 10 *
 # ── Load the trained model once at startup, not per-request ──
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "model", "MobileNetV2_final.h5")
 model = tf.keras.models.load_model(MODEL_PATH)
+
+# ── Pre-warm: run one dummy inference so the first real request isn't slow ──
+_warm = np.zeros((1, 224, 224, 3), dtype=np.float32)
+model.predict(_warm, verbose=0)
+del _warm
 
 # ── Class index mapping — MUST match the training generator's class_indices ──
 # Confirmed from Colab Cell 7 output: {'Early_Blight': 0, 'Healthy': 1, 'Late_Blight': 2}
