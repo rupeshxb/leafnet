@@ -377,9 +377,33 @@
     camFlash.classList.remove('hidden');
     camFlash.addEventListener('animationend', () => camFlash.classList.add('hidden'), { once: true });
 
-    camCanvas.width  = camVideo.videoWidth  || 1280;
-    camCanvas.height = camVideo.videoHeight || 720;
-    camCanvas.getContext('2d').drawImage(camVideo, 0, 0);
+    const videoW = camVideo.videoWidth  || 1280;
+    const videoH = camVideo.videoHeight || 720;
+
+    // Replicate object-fit:cover crop so the captured frame matches
+    // exactly what was visible in the viewfinder container
+    const wrap = document.getElementById('camWrap');
+    const containerAspect = wrap.offsetWidth / wrap.offsetHeight;
+    const videoAspect     = videoW / videoH;
+
+    let srcX, srcY, srcW, srcH;
+    if (videoAspect > containerAspect) {
+      // Video wider than container → crop left/right
+      srcH = videoH;
+      srcW = videoH * containerAspect;
+      srcX = (videoW - srcW) / 2;
+      srcY = 0;
+    } else {
+      // Video taller than container → crop top/bottom
+      srcW = videoW;
+      srcH = videoW / containerAspect;
+      srcX = 0;
+      srcY = (videoH - srcH) / 2;
+    }
+
+    camCanvas.width  = srcW;
+    camCanvas.height = srcH;
+    camCanvas.getContext('2d').drawImage(camVideo, srcX, srcY, srcW, srcH, 0, 0, srcW, srcH);
 
     camCanvas.toBlob(blob => {
       if (!blob) return;
