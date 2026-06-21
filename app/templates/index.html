@@ -8,7 +8,6 @@
 </head>
 <body>
 
-  <!-- ── Header ── -->
   <header class="site-header">
     <div class="header-inner">
       <div class="logo">
@@ -24,20 +23,20 @@
     <!-- ── Upload card ── -->
     <section class="card upload-card" id="uploadSection">
       <h2 class="card-title">Analyse a Leaf</h2>
-      <p class="card-subtitle">Upload or capture a clear photo of a potato leaf. The model will identify Early Blight, Late Blight, or a Healthy leaf.</p>
+      <p class="card-subtitle">Upload or photograph a potato leaf. The model detects Early Blight, Late Blight, or Healthy.</p>
 
-      <!-- Desktop camera notice (injected by JS on non-mobile) -->
+      <!-- Desktop camera notice (shown by JS on non-mobile) -->
       <div class="desktop-cam-notice hidden" id="desktopCamNotice">
         <div class="dcn-body">
           <span class="dcn-icon">📱</span>
           <div class="dcn-text">
             <strong>Camera is available on mobile only</strong>
-            <p>Open this page on your phone to scan a leaf directly with your camera. Scan the QR code or copy the link.</p>
+            <p>Open this page on your phone to photograph a leaf directly. Scan the QR code or copy the link below.</p>
           </div>
         </div>
         <div class="dcn-qr">
           <img id="qrImg" src="" alt="QR code" />
-          <span class="dcn-url" id="dcnUrl"></span>
+          <span class="dcn-url" id="dcnUrl" title="Click to copy"></span>
         </div>
       </div>
 
@@ -47,6 +46,7 @@
         <button type="button" class="mode-tab" id="tabCamera">📷 Camera</button>
       </div>
 
+      <!-- ── Gallery panel ── -->
       <form action="/predict" method="POST" enctype="multipart/form-data" id="uploadForm">
 
         {% if error %}
@@ -55,7 +55,6 @@
         </div>
         {% endif %}
 
-        <!-- ── Gallery panel ── -->
         <div id="panelGallery">
           <div class="drop-zone" id="dropZone" tabindex="0" role="button" aria-label="Upload leaf image">
             <div class="drop-zone-inner" id="dropZoneContent">
@@ -65,24 +64,33 @@
               <p class="drop-hint">JPG, PNG, WEBP — max 10 MB</p>
             </div>
             <img class="preview-img hidden" id="previewImg" alt="Selected leaf preview" />
-            <input type="file" name="leaf_image" id="fileInput" accept="image/*" class="file-input" />
+            <input type="file" name="leaf_image" id="fileInput" accept="image/jpeg,image/png,image/webp,image/jpg" class="file-input" />
           </div>
-
           <div class="file-badge hidden" id="fileBadge">
             <span class="file-badge-icon">🖼️</span>
             <span id="fileNameLabel">No file chosen</span>
-            <button type="button" class="file-clear-btn" id="clearBtn" aria-label="Remove selected file">✕</button>
+            <button type="button" class="file-clear-btn" id="clearBtn" aria-label="Remove">✕</button>
           </div>
         </div>
 
-        <!-- ── Camera panel (mobile only) ── -->
-        <div id="panelCamera" class="hidden">
+        <button type="submit" class="btn btn-primary" id="submitBtn" disabled>
+          <span class="btn-text">Analyse Leaf</span>
+          <span class="btn-spinner hidden" id="spinner"></span>
+        </button>
 
-          <!-- Viewfinder -->
-          <div class="cam-wrap" id="camWrap">
+      </form>
+
+      <!-- ── Camera panel (outside form — submits via fetch) ── -->
+      <div id="panelCamera" class="hidden">
+
+        <!-- State 1: live viewfinder -->
+        <div id="camViewfinder">
+          <div class="cam-wrap">
             <video id="camVideo" autoplay playsinline muted class="cam-video"></video>
-            <!-- Corner guide brackets -->
-            <div class="cam-guide">
+            <!-- Flash overlay -->
+            <div class="cam-flash hidden" id="camFlash"></div>
+            <!-- Corner frame guide -->
+            <div class="cam-guide" aria-hidden="true">
               <div class="cam-corner cam-corner--tl"></div>
               <div class="cam-corner cam-corner--tr"></div>
               <div class="cam-corner cam-corner--bl"></div>
@@ -91,37 +99,47 @@
             </div>
             <!-- Controls -->
             <div class="cam-controls">
-              <button type="button" class="cam-action-btn cam-flip-btn" id="flipBtn" title="Flip camera">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <button type="button" class="cam-action-btn" id="flipBtn" title="Flip camera" aria-label="Flip camera">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <path d="M1 4v6h6"/><path d="M23 20v-6h-6"/>
                   <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"/>
                 </svg>
               </button>
-              <button type="button" class="cam-capture-btn" id="captureBtn" title="Take photo">
+              <button type="button" class="cam-capture-btn" id="captureBtn" aria-label="Take photo">
                 <span class="cam-capture-ring"></span>
               </button>
               <div class="cam-action-spacer"></div>
             </div>
           </div>
 
-          <!-- Error state -->
+          <!-- Permission / device error -->
           <div class="cam-error hidden" id="camError">
             <div class="cam-error-icon">📵</div>
-            <p class="cam-error-msg" id="camErrorMsg">Could not access camera.</p>
+            <p class="cam-error-msg" id="camErrorMsg"></p>
             <button type="button" class="btn btn-outline" id="camRetryBtn">Try Again</button>
           </div>
-
         </div>
 
-        <!-- Hidden canvas used for capture -->
+        <!-- State 2: capture preview — confirm before sending -->
+        <div id="camPreview" class="hidden">
+          <div class="cam-preview-wrap">
+            <img id="camPreviewImg" alt="Captured leaf" class="cam-preview-img" />
+            <div class="cam-preview-badge">📸 Review your photo</div>
+          </div>
+          <p class="cam-preview-hint">Make sure the leaf is clear, in focus, and fills most of the frame.</p>
+          <div class="cam-preview-actions">
+            <button type="button" class="btn btn-outline" id="retakeBtn">↩ Retake</button>
+            <button type="button" class="btn btn-primary" id="analyseBtn">
+              <span class="btn-text">Analyse Leaf</span>
+              <span class="btn-spinner hidden" id="camSpinner"></span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Hidden canvas for frame capture -->
         <canvas id="camCanvas" class="hidden"></canvas>
 
-        <button type="submit" class="btn btn-primary" id="submitBtn" disabled>
-          <span class="btn-text">Analyse Leaf</span>
-          <span class="btn-spinner hidden" id="spinner"></span>
-        </button>
-
-      </form>
+      </div>
     </section>
 
     <!-- ── Result card ── -->
@@ -135,12 +153,10 @@
 
         <div class="verdict verdict--{{ result.class_key | lower | replace('_', '-') }}">
           <div class="verdict-badge">
-            {% if result.class_key == 'Healthy' %}
-              <span class="verdict-icon">✅</span>
-            {% elif result.class_key == 'Early_Blight' %}
-              <span class="verdict-icon">🟠</span>
-            {% else %}
-              <span class="verdict-icon">🔴</span>
+            {% if result.class_key == 'Healthy' %}<span class="verdict-icon">✅</span>
+            {% elif result.class_key == 'Early_Blight' %}<span class="verdict-icon">🟠</span>
+            {% elif result.class_key == 'Late_Blight' %}<span class="verdict-icon">🔴</span>
+            {% else %}<span class="verdict-icon">❓</span>
             {% endif %}
             <span class="verdict-label">{{ result.label }}</span>
           </div>
@@ -169,7 +185,9 @@
         <h3 class="recommendation-title">
           {% if result.class_key == 'Healthy' %}✅ Crop looks healthy
           {% elif result.class_key == 'Early_Blight' %}⚠️ Recommended action
-          {% else %}🚨 Urgent action required{% endif %}
+          {% elif result.class_key == 'Late_Blight' %}🚨 Urgent action required
+          {% else %}🔍 Image not clear enough
+          {% endif %}
         </h3>
         <p class="recommendation-body">{{ result.action }}</p>
       </div>
@@ -193,12 +211,12 @@
         <div class="info-card info-card--early-blight">
           <div class="info-card-icon">🍂</div>
           <h3>Early Blight</h3>
-          <p>Caused by <em>Alternaria solani</em>. Presents as dark, concentric-ring spots on older leaves. Spreads slowly and is manageable with timely fungicide application.</p>
+          <p>Caused by <em>Alternaria solani</em>. Presents as dark, concentric-ring spots on older leaves. Manageable with timely fungicide application.</p>
         </div>
         <div class="info-card info-card--late-blight">
           <div class="info-card-icon">☁️</div>
           <h3>Late Blight</h3>
-          <p>Caused by <em>Phytophthora infestans</em>. Water-soaked lesions that spread rapidly under cool, humid conditions. Can devastate a crop within days if untreated.</p>
+          <p>Caused by <em>Phytophthora infestans</em>. Spreads rapidly under cool, humid conditions. Can devastate a crop within days if untreated.</p>
         </div>
       </div>
     </section>
@@ -213,51 +231,55 @@
   // ── Device detection ──────────────────────────────────────────────
   const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-  const modeTabs        = document.getElementById('modeTabs');
-  const desktopNotice   = document.getElementById('desktopCamNotice');
-  const tabGallery      = document.getElementById('tabGallery');
-  const tabCamera       = document.getElementById('tabCamera');
-  const panelGallery    = document.getElementById('panelGallery');
-  const panelCamera     = document.getElementById('panelCamera');
-  const camVideo        = document.getElementById('camVideo');
-  const camCanvas       = document.getElementById('camCanvas');
-  const camError        = document.getElementById('camError');
-  const camErrorMsg     = document.getElementById('camErrorMsg');
-  const captureBtn      = document.getElementById('captureBtn');
-  const flipBtn         = document.getElementById('flipBtn');
-  const camRetryBtn     = document.getElementById('camRetryBtn');
-  const dropZone        = document.getElementById('dropZone');
-  const fileInput       = document.getElementById('fileInput');
-  const previewImg      = document.getElementById('previewImg');
-  const dropContent     = document.getElementById('dropZoneContent');
-  const fileBadge       = document.getElementById('fileBadge');
-  const fileNameLabel   = document.getElementById('fileNameLabel');
-  const clearBtn        = document.getElementById('clearBtn');
-  const submitBtn       = document.getElementById('submitBtn');
-  const uploadForm      = document.getElementById('uploadForm');
-  const spinner         = document.getElementById('spinner');
+  const modeTabs          = document.getElementById('modeTabs');
+  const desktopNotice     = document.getElementById('desktopCamNotice');
+  const tabGallery        = document.getElementById('tabGallery');
+  const tabCamera         = document.getElementById('tabCamera');
+  const panelGallery      = document.getElementById('panelGallery');
+  const panelCamera       = document.getElementById('panelCamera');
+  const camViewfinder     = document.getElementById('camViewfinder');
+  const camPreview        = document.getElementById('camPreview');
+  const camVideo          = document.getElementById('camVideo');
+  const camCanvas         = document.getElementById('camCanvas');
+  const camFlash          = document.getElementById('camFlash');
+  const camError          = document.getElementById('camError');
+  const camErrorMsg       = document.getElementById('camErrorMsg');
+  const camPreviewImg     = document.getElementById('camPreviewImg');
+  const captureBtn        = document.getElementById('captureBtn');
+  const flipBtn           = document.getElementById('flipBtn');
+  const retakeBtn         = document.getElementById('retakeBtn');
+  const analyseBtn        = document.getElementById('analyseBtn');
+  const camRetryBtn       = document.getElementById('camRetryBtn');
+  const dropZone          = document.getElementById('dropZone');
+  const fileInput         = document.getElementById('fileInput');
+  const previewImg        = document.getElementById('previewImg');
+  const dropContent       = document.getElementById('dropZoneContent');
+  const fileBadge         = document.getElementById('fileBadge');
+  const fileNameLabel     = document.getElementById('fileNameLabel');
+  const clearBtn          = document.getElementById('clearBtn');
+  const submitBtn         = document.getElementById('submitBtn');
+  const uploadForm        = document.getElementById('uploadForm');
+  const spinner           = document.getElementById('spinner');
 
+  // ── Desktop notice & QR ──────────────────────────────────────────
   if (isMobile) {
     modeTabs.classList.remove('hidden');
   } else {
     desktopNotice.classList.remove('hidden');
-    // Generate QR code from current page URL using qrserver.com (no library needed)
     const url = window.location.href;
-    const qrImg = document.getElementById('qrImg');
-    qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=120x120&color=166534&data=' + encodeURIComponent(url);
+    document.getElementById('qrImg').src =
+      'https://api.qrserver.com/v1/create-qr-code/?size=120x120&color=166534&data=' + encodeURIComponent(url);
     const dcnUrl = document.getElementById('dcnUrl');
     dcnUrl.textContent = url;
-    dcnUrl.title = 'Copy link';
-    dcnUrl.style.cursor = 'pointer';
     dcnUrl.addEventListener('click', () => {
       navigator.clipboard.writeText(url).then(() => {
         dcnUrl.textContent = '✓ Copied!';
-        setTimeout(() => dcnUrl.textContent = url, 2000);
+        setTimeout(() => { dcnUrl.textContent = url; }, 2000);
       });
     });
   }
 
-  // ── Gallery / upload logic ────────────────────────────────────────
+  // ── Gallery / file upload ─────────────────────────────────────────
   function showPreview(file) {
     if (!file || !file.type.startsWith('image/')) return;
     const reader = new FileReader();
@@ -286,7 +308,6 @@
 
   fileInput.addEventListener('change', () => showPreview(fileInput.files[0]));
   clearBtn.addEventListener('click', clearSelection);
-
   dropZone.addEventListener('click', e => { if (e.target !== clearBtn) fileInput.click(); });
   dropZone.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') fileInput.click(); });
   dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
@@ -297,16 +318,17 @@
     const file = e.dataTransfer.files[0];
     if (file) { const dt = new DataTransfer(); dt.items.add(file); fileInput.files = dt.files; showPreview(file); }
   });
-
   uploadForm.addEventListener('submit', () => {
     submitBtn.querySelector('.btn-text').textContent = 'Analysing…';
     spinner.classList.remove('hidden');
     submitBtn.disabled = true;
   });
 
-  // ── Camera logic ──────────────────────────────────────────────────
-  let stream = null;
-  let facingMode = 'environment'; // start with rear camera
+  // ── Camera state machine ──────────────────────────────────────────
+  // States: 'viewfinder' | 'preview'
+  let stream       = null;
+  let facingMode   = 'environment';
+  let capturedBlob = null;
 
   async function startCamera() {
     camError.classList.add('hidden');
@@ -318,13 +340,13 @@
       });
       camVideo.srcObject = stream;
     } catch (err) {
-      let msg = 'Could not access camera. Please check your browser permissions.';
+      let msg = 'Could not access the camera. Please check browser permissions and try again.';
       if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        msg = 'Camera permission denied. Tap your browser\'s address bar, allow camera access, then try again.';
-      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+        msg = 'Camera permission denied. Tap the address bar icon, allow camera access, then tap Try Again.';
+      } else if (err.name === 'NotFoundError') {
         msg = 'No camera found on this device.';
       } else if (err.name === 'NotReadableError') {
-        msg = 'Camera is already in use by another app. Close it and try again.';
+        msg = 'Camera is in use by another app. Close it and tap Try Again.';
       }
       camErrorMsg.textContent = msg;
       camError.classList.remove('hidden');
@@ -336,20 +358,33 @@
     camVideo.srcObject = null;
   }
 
+  function showViewfinder() {
+    camPreview.classList.add('hidden');
+    camViewfinder.classList.remove('hidden');
+  }
+
+  function showCapturePreview(blob) {
+    capturedBlob = blob;
+    const objectUrl = URL.createObjectURL(blob);
+    camPreviewImg.src = objectUrl;
+    camViewfinder.classList.add('hidden');
+    camPreview.classList.remove('hidden');
+  }
+
   function capturePhoto() {
     if (!stream) return;
-    camCanvas.width  = camVideo.videoWidth;
-    camCanvas.height = camVideo.videoHeight;
+    // White flash
+    camFlash.classList.remove('hidden');
+    camFlash.addEventListener('animationend', () => camFlash.classList.add('hidden'), { once: true });
+
+    camCanvas.width  = camVideo.videoWidth  || 1280;
+    camCanvas.height = camVideo.videoHeight || 720;
     camCanvas.getContext('2d').drawImage(camVideo, 0, 0);
+
     camCanvas.toBlob(blob => {
-      const file = new File([blob], 'leaf-capture.jpg', { type: 'image/jpeg', lastModified: Date.now() });
-      const dt = new DataTransfer();
-      dt.items.add(file);
-      fileInput.files = dt.files;
+      if (!blob) return;
       stopCamera();
-      // Switch to gallery panel to show preview + enable submit
-      activateTab('gallery');
-      showPreview(file);
+      showCapturePreview(blob);
     }, 'image/jpeg', 0.92);
   }
 
@@ -358,21 +393,51 @@
     await startCamera();
   }
 
+  // Camera capture submit — uses fetch, never touches the file input
+  async function submitCapture() {
+    if (!capturedBlob) return;
+
+    const fd = new FormData();
+    fd.append('leaf_image', capturedBlob, 'leaf-capture.jpg');
+
+    analyseBtn.disabled = true;
+    analyseBtn.querySelector('.btn-text').textContent = 'Analysing…';
+    document.getElementById('camSpinner').classList.remove('hidden');
+
+    try {
+      const res = await fetch('/predict', { method: 'POST', body: fd });
+      if (!res.ok) throw new Error(`Server error ${res.status}`);
+      const html = await res.text();
+      // Replace page with server response
+      document.open('text/html', 'replace');
+      document.write(html);
+      document.close();
+    } catch (err) {
+      analyseBtn.disabled = false;
+      analyseBtn.querySelector('.btn-text').textContent = 'Analyse Leaf';
+      document.getElementById('camSpinner').classList.add('hidden');
+      alert('Something went wrong sending the image. Please check your connection and try again.');
+    }
+  }
+
   captureBtn.addEventListener('click', capturePhoto);
   flipBtn.addEventListener('click', flipCamera);
   camRetryBtn.addEventListener('click', startCamera);
+  retakeBtn.addEventListener('click', () => { capturedBlob = null; showViewfinder(); startCamera(); });
+  analyseBtn.addEventListener('click', submitCapture);
 
   // ── Tab switching ─────────────────────────────────────────────────
   function activateTab(tab) {
     if (tab === 'camera') {
-      panelGallery.classList.add('hidden');
+      uploadForm.classList.add('hidden');
       panelCamera.classList.remove('hidden');
       tabGallery.classList.remove('active');
       tabCamera.classList.add('active');
+      showViewfinder();
       startCamera();
     } else {
       panelCamera.classList.add('hidden');
-      panelGallery.classList.remove('hidden');
+      uploadForm.classList.remove('hidden');
       tabCamera.classList.remove('active');
       tabGallery.classList.add('active');
       stopCamera();
@@ -382,10 +447,7 @@
   tabGallery.addEventListener('click', () => activateTab('gallery'));
   tabCamera.addEventListener('click',  () => activateTab('camera'));
 
-  // Stop camera when page is hidden (e.g. user switches app)
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) stopCamera();
-  });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) stopCamera(); });
 
   // ── Scroll to result ──────────────────────────────────────────────
   const resultSection = document.getElementById('resultSection');

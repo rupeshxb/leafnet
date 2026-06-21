@@ -60,6 +60,7 @@ DISPLAY_INFO = {
 }
 
 IMG_SIZE = (224, 224)
+CONFIDENCE_THRESHOLD = 65.0  # below this the image is likely not a clear potato leaf
 
 
 def preprocess_image(image_file):
@@ -114,14 +115,29 @@ def predict():
     predicted_class = CLASS_NAMES[predicted_idx]
     confidence = float(predictions[predicted_idx]) * 100
 
-    info = DISPLAY_INFO[predicted_class]
-
     all_probs = [
         {"class_key": CLASS_NAMES[i], "label": DISPLAY_INFO[CLASS_NAMES[i]]["label"],
          "pct": round(float(predictions[i]) * 100, 1)}
         for i in range(len(CLASS_NAMES))
     ]
 
+    if confidence < CONFIDENCE_THRESHOLD:
+        result = {
+            "class_key": "unclear",
+            "label": "Cannot identify",
+            "confidence": f"{confidence:.1f}",
+            "action": (
+                "The image could not be confidently identified as a potato leaf. "
+                "Tips for a better result: hold the leaf steady and close to the camera, "
+                "ensure it is in sharp focus, use good natural lighting, and make sure "
+                "the leaf fills most of the frame with a plain background if possible."
+            ),
+            "all_probs": all_probs,
+            "image_b64": img_b64,
+        }
+        return render_template("index.html", result=result, error=None)
+
+    info = DISPLAY_INFO[predicted_class]
     result = {
         "class_key": predicted_class,
         "label": info["label"],

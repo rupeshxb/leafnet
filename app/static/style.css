@@ -11,6 +11,9 @@
   --red:          #dc2626;
   --red-light:    #fee2e2;
   --red-mid:      #fca5a5;
+  --yellow:       #b45309;
+  --yellow-light: #fefce8;
+  --yellow-mid:   #fde68a;
   --surface:      #ffffff;
   --surface-2:    #f8fafc;
   --border:       #e2e8f0;
@@ -344,6 +347,21 @@ body {
 }
 .cam-capture-btn:active .cam-capture-ring { transform: scale(.88); }
 
+/* Camera flash overlay */
+.cam-flash {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  z-index: 20;
+  border-radius: 14px;
+  animation: camFlash .35s ease-out forwards;
+  pointer-events: none;
+}
+@keyframes camFlash {
+  0%   { opacity: .95; }
+  100% { opacity: 0; }
+}
+
 /* Camera error state */
 .cam-error {
   text-align: center;
@@ -355,6 +373,47 @@ body {
 }
 .cam-error-icon { font-size: 2rem; margin-bottom: .5rem; }
 .cam-error-msg { font-size: .9rem; color: var(--red); margin-bottom: 1rem; line-height: 1.5; }
+
+/* Capture preview (confirm before send) */
+.cam-preview-wrap {
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  margin-bottom: .75rem;
+  border: 2px solid var(--green);
+}
+.cam-preview-img {
+  width: 100%;
+  display: block;
+  object-fit: cover;
+  max-height: 340px;
+}
+.cam-preview-badge {
+  position: absolute;
+  bottom: .75rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,.55);
+  color: #fff;
+  font-size: .78rem;
+  font-weight: 600;
+  padding: .3rem .85rem;
+  border-radius: 99px;
+  white-space: nowrap;
+  backdrop-filter: blur(4px);
+}
+.cam-preview-hint {
+  font-size: .83rem;
+  color: var(--text-muted);
+  text-align: center;
+  margin-bottom: 1rem;
+  line-height: 1.5;
+}
+.cam-preview-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .75rem;
+}
 
 /* ── Buttons ── */
 .btn {
@@ -422,6 +481,7 @@ body {
 .verdict--healthy      .verdict-badge { background: var(--green-light);  color: var(--green); }
 .verdict--early-blight .verdict-badge { background: var(--orange-light); color: var(--orange); }
 .verdict--late-blight  .verdict-badge { background: var(--red-light);    color: var(--red); }
+.verdict--unclear      .verdict-badge { background: var(--yellow-light); color: var(--yellow); }
 .verdict-icon { font-size: 1.3rem; }
 
 .confidence-wrap { display: flex; align-items: baseline; gap: .4rem; }
@@ -429,6 +489,7 @@ body {
 .verdict--healthy      .confidence-value { color: var(--green); }
 .verdict--early-blight .confidence-value { color: var(--orange); }
 .verdict--late-blight  .confidence-value { color: var(--red); }
+.verdict--unclear      .confidence-value { color: var(--yellow); }
 .confidence-text { color: var(--text-muted); font-size: .9rem; }
 
 /* Probability bars */
@@ -452,10 +513,12 @@ body {
 .recommendation--healthy      { background: var(--green-light);  border-color: var(--green); }
 .recommendation--early-blight { background: var(--orange-light); border-color: var(--orange); }
 .recommendation--late-blight  { background: var(--red-light);    border-color: var(--red); }
+.recommendation--unclear      { background: var(--yellow-light); border-color: var(--yellow); }
 .recommendation-title { font-weight: 700; margin-bottom: .4rem; font-size: .95rem; }
 .recommendation--healthy      .recommendation-title { color: var(--green); }
 .recommendation--early-blight .recommendation-title { color: var(--orange); }
 .recommendation--late-blight  .recommendation-title { color: var(--red); }
+.recommendation--unclear      .recommendation-title { color: var(--yellow); }
 .recommendation-body { font-size: .9rem; color: var(--text); line-height: 1.65; }
 .result-footer { text-align: center; }
 
